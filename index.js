@@ -5,68 +5,86 @@ const Topping = require('./models/topping');
 const app = express();
 
 app.use(express.urlencoded({ extended: false}));
+app.use(express.json());
 mongoose.connect('mongodb://localhost/nme-backend'); // Connect to Mongo!
 
-app.get('/', (req, res) => {
+app.get('/pizzas', (req, res) => {
   Pizza.find({}, function(err, pizzas) {
     if (err) res.json(err)
     res.json(pizzas)
   })
 })
 
-app.post('/pizzas/:id', (req, res) => {
-  Pizza.create({
-        name: req.body.name,
-        size: req.body.size,
-        price: req.body.price
-    }, function(err, pizzas) {
-    res.json(pizzas)
+app.get('/pizzas/:id', (req, res) => {
+  Pizza.findById(req.params.id).populate('topping').exec( (err, pizza) => {
+    if(!err) {
+      res.status(200).json(pizza);
+    } else {
+      res.status(500).json(err)
+
+    }
   })
 })
 
-app.get('/:name', (req, res) => {
-  Pizza.findOne({name: req.params.name}, function(err, pizzas) {
-    res.json({message: "DELETED", pizzas})
+app.post('/pizzas', (req, res) => {
+  console.log(req.body)
+  let pizza = new Pizza({
+    name: req.body.name,
+    size: req.body.size,
+    price: parseInt(req.body.price)
+  });
+  pizza.save((err, pizza) => {
+    console.log("----- INSIDE PIZZA SAVE")
+    if(err) res.json(err);
+    res.status(201).json(pizza);
+  });
+})
+
+app.put('/pizzas/:id', (req, res) => {
+  Pizza.findByIdAndUpdate(req.params.id, {
+    name: req.body.name,
+    size: req.body.size,
+    price: parseInt(req.body.price)
+  }, {
+    new: true
+  }, (err, pizza) => {
+    res.status(203).json(pizza);
+  });
+});
+
+app.get('/pizzas/:pid/topping', (req, res) => {
+  Pizza.findById(req.params.pid).populate('toppings').exec ( (err, pizzas) => {
+    res.status(200).json(queen.toppings);
   })
 })
 
-app.get('/pizzas/:pid/toppings/tid', (req, res) => {
-  Toppings.findById(req.params.tid, (err, topping) => {
-    res.json(topping)
-  })
-})
+app.get('/pizzas/:pid/toppings/:tid', (req, res) => {
+  Topping.findById(req.params.tid, (err, topping) => {
+    res.status(200).json(topping);
+  });
+});
 
-app.get('/pizzaupdate/:name', (req, res) => {
-  Pizza.findOneAndUpdate({name: req.params.name},
-    {$set:{
-        name: req.body.name,
-        size: req.body.size,
-        price: req.body.price
-      }
-    },{new: true}, function(err, pizzas) {
-      if(err) res.json(err)
-    res.json(pizzas)
-  })
-})
 
-app.post('/pizzas/:name/toppings', (req, res) => {
-  Pizza.findOne({ name: req.params.name}, function(err, pizza) {
-    Toppings.create({name: req.body.name}, function(err, topping) {
-      pizza.toppings.push(topping._id)
-      pizza.save(function(err, pizza) {
-        if(err) res.json(err)
-        res.json(pizza)
+app.post('/pizzas/:pid/toppings', (req, res) => {
+  Pizza.findById(req.params.pid, (err, pizza) => {
+    let newTopping = new Topping({
+      name: req.body.name
+    })
+    newTopping.save((err, topping) => {
+      pizza.toppings.push(topping._id);
+      pizza.save( (err, pizza) => {
+      res.status(200).json(pizza); 
       })
     })
   })
 })
 
 app.delete('/pizzas/:pid/toppings/:tid', (req, res) => {
-  Pizza.findById(req.params.pidf, function(err, pizza) {
+  Pizza.findById(req.params.pid, function(err, pizza) {
     pizza.toppings.pull(req.params.tid)
     pizzas.save(err => {
       if (err) res.json(err);
-      Toppings.deleteOne({_id: req.params.tid}, err => {
+      Topping.deleteOne({_id: req.params.tid}, err => {
         if(err) res.json(err)
         res.json(1);
       })
