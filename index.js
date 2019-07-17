@@ -14,63 +14,63 @@ app.get('/', (req, res) => {
   })
 })
 
-app.get('/', (req, res) =>{
-  Topping.find({}, function(err, toppings) {
-    if(err) res.json(err)
-    res.json(toppings)
-  })
-})
-
-app.post('/pizzas', (req, res) => {
+app.post('/pizzas/:id', (req, res) => {
   Pizza.create({
-    name: req.body.name,
-    size: req.body.size,
-    price: req.body.price
-  }, function(err, pizza) {
-    res.json(pizza)
+        name: req.body.name,
+        size: req.body.size,
+        price: req.body.price
+    }, function(err, pizzas) {
+    res.json(pizzas)
   })
 })
 
-app.post('/toppings', (req, res) => {
-  Topping.create({
-    name: req.body.name
-  }, function(err, toppings) {
-    res.json(toppings)
+app.get('/:name', (req, res) => {
+  Pizza.findOne({name: req.params.name}, function(err, pizzas) {
+    res.json({message: "DELETED", pizzas})
   })
 })
 
-app.get('/pizzas/:id', (req, res) => {
-  Pizza.findById(req.params.id).populate('pizzas').exec(function(err, pizza) {
-    if (err) res.json(err)
-    res.json(pizza);
+app.get('/pizzas/:pid/toppings/tid', (req, res) => {
+  Toppings.findById(req.params.tid, (err, topping) => {
+    res.json(topping)
   })
 })
 
-app.get('/delete', (req, res) => {
-  Pizza.remove({name: " "}, function(err) {
-    if (err) res.json(err);
-    res.json({message: 'DELETED'})
+app.get('/pizzaupdate/:name', (req, res) => {
+  Pizza.findOneAndUpdate({name: req.params.name},
+    {$set:{
+        name: req.body.name,
+        size: req.body.size,
+        price: req.body.price
+      }
+    },{new: true}, function(err, pizzas) {
+      if(err) res.json(err)
+    res.json(pizzas)
   })
 })
 
-app.get('/destroyname', (req, res) => {
-  Pizza.findOneAndRemove({name: ""}, function(err) {
-    if(err) res.json(err)
-    res.json({message: 'DELETED'})
+app.post('/pizzas/:name/toppings', (req, res) => {
+  Pizza.findOne({ name: req.params.name}, function(err, pizza) {
+    Toppings.create({name: req.body.name}, function(err, topping) {
+      pizza.toppings.push(topping._id)
+      pizza.save(function(err, pizza) {
+        if(err) res.json(err)
+        res.json(pizza)
+      })
+    })
   })
 })
 
-app.get('/delete', (req, res) => {
-  Topping.remove({name: " "}, function(err) {
-    if (err) res.json(err);
-    res.json({message: 'DELETED'})
-  })
-})
-
-app.get('/destroyname', (req, res) => {
-  User.findOneAndRemove({name: " "}, function(err) {
-    if(err) res.json(err)
-    res.json({message: 'DELETED'})
+app.delete('/pizzas/:pid/toppings/:tid', (req, res) => {
+  Pizza.findById(req.params.pidf, function(err, pizza) {
+    pizza.toppings.pull(req.params.tid)
+    pizzas.save(err => {
+      if (err) res.json(err);
+      Toppings.deleteOne({_id: req.params.tid}, err => {
+        if(err) res.json(err)
+        res.json(1);
+      })
+    })
   })
 })
 
